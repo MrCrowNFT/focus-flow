@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "pcdi30Ga0cc=",
+  "success": true,
+  "projectFilePath": "/home/lucian/Software_dev/Projects/focus-flow/focus-flow.API/focus-flow.API.csproj",
+  "expectedPackageFiles": [
+    "/home/lucian/.nuget/packages/microsoft.aspnetcore.openapi/9.0.5/microsoft.aspnetcore.openapi.9.0.5.nupkg.sha512",
+    "/home/lucian/.nuget/packages/microsoft.openapi/1.6.17/microsoft.openapi.1.6.17.nupkg.sha512"
+  ],
+  "logs": []
+}

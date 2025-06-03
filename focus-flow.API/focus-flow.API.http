@@ -1,0 +1,6 @@
+@focus_flow.API_HostAddress = http://localhost:5122
+
+GET {{focus_flow.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
