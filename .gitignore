@@ -1,0 +1,39 @@
+# Build results for all projects
+*/[Dd]ebug/
+*/[Dd]ebugPublic/
+*/[Rr]elease/
+*/[Rr]eleases/
+*/x64/
+*/x86/
+*/[Aa][Rr][Mm]/
+*/[Aa][Rr][Mm]64/
+*/bld/
+*/[Bb]in/
+*/[Oo]bj/
+
+# catch them at any depth
+**/[Bb]in/
+**/[Oo]bj/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.cache
+*.docstates
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Build artifacts
+*.dll
+*.pdb
+*.exe
+*.deps.json
+*.runtimeconfig.json
+*.sourcelink.json
+
+# Blazor WebAssembly specific
+wwwroot/_framework/
