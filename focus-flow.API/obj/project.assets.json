@@ -33,6 +33,16 @@
             "related": ".pdb;.xml"
           }
         }
+      },
+      "focus-flow.Shared/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v9.0",
+        "compile": {
+          "bin/placeholder/focus-flow.Shared.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/focus-flow.Shared.dll": {}
+        }
       }
     }
   },
@@ -67,11 +77,17 @@
         "microsoft.openapi.1.6.17.nupkg.sha512",
         "microsoft.openapi.nuspec"
       ]
+    },
+    "focus-flow.Shared/1.0.0": {
+      "type": "project",
+      "path": "../focus-flow.Shared/focus-flow.Shared.csproj",
+      "msbuildProject": "../focus-flow.Shared/focus-flow.Shared.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net9.0": [
-      "Microsoft.AspNetCore.OpenApi >= 9.0.5"
+      "Microsoft.AspNetCore.OpenApi >= 9.0.5",
+      "focus-flow.Shared >= 1.0.0"
     ]
   },
   "packageFolders": {
@@ -99,7 +115,11 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "/home/lucian/Software_dev/Projects/focus-flow/focus-flow.Shared/focus-flow.Shared.csproj": {
+              "projectPath": "/home/lucian/Software_dev/Projects/focus-flow/focus-flow.Shared/focus-flow.Shared.csproj"
+            }
+          }
         }
       },
       "warningProperties": {
