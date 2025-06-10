@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace focus_flow.API.controllers;
 
 [ApiController]
-[Route("/[controller]")]
+[Route("[controller]")]
 public class taskController : ControllerBase
 {
     private readonly tasksDbContext _context;
@@ -41,6 +41,36 @@ public class taskController : ControllerBase
         return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
     }
 
-    
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTask(int id, taskItem updatedTask)
+    {
+        if (id != updatedTask.Id) return BadRequest();
+
+        _context.Entry(updatedTask).State = EntityState.Modified;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!_context.Tasks.Any(t => t.Id == id)) return NotFound();
+            throw;
+        }
+
+        return NoContent();
+    }
+    //IActionResult since we are not returning data
+    [HttpDelete("id")]
+    public async Task<IActionResult> DeleteTask(int id)
+    {
+        var task = await _context.Tasks.FindAsync(id);
+        if (task == null) return NotFound();
+
+        _context.Tasks.Remove(task);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
 
 }
