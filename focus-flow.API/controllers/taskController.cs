@@ -61,7 +61,7 @@ public class taskController : ControllerBase
         return NoContent();
     }
     //IActionResult since we are not returning data
-    [HttpDelete("id")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTask(int id)
     {
         var task = await _context.Tasks.FindAsync(id);

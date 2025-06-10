@@ -24,7 +24,7 @@ public class tagController : ControllerBase
             .ToListAsync();
     }
 
-    [HttpGet("id")]
+    [HttpGet("{id}")]
     public async Task<ActionResult<tag>> GetTag(int id)
     {
         var tag = await _context.Tags
@@ -40,7 +40,7 @@ public class tagController : ControllerBase
         return CreatedAtAction(nameof(GetTag), new { id = tag.Id }, tag);
     }
 
-    [HttpDelete("id")]
+    [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteTag(int id)
     {
         var tag = await _context.Tags.FindAsync(id);
