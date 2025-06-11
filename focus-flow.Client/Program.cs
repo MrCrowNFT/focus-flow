@@ -10,6 +10,10 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped<TaskService>();
 builder.Services.AddScoped<TagService>();
 
-builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+// Configure HttpClient with API base address
+builder.Services.AddScoped(sp => new HttpClient { 
+    BaseAddress = new Uri("https://localhost:7000/") // API base URL
+});
+
 
 await builder.Build().RunAsync();
