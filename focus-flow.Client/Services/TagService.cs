@@ -1,4 +1,3 @@
-using System.Net;
 using System.Net.Http.Json;
 using focus_flow.Shared.models;
 
@@ -12,11 +11,14 @@ public class TagService
     }
 
     public async Task<List<tag>> GetTagsAsync()
-        => await _http.GetFromJsonAsync<List<tag>>("tag");
-
+    {
+        var response = await _http.GetAsync("tag");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<List<tag>>() ?? new List<tag>();
+    }
     public async Task<tag?> GetTagAsync(int id)
     {
-        var response = await _http.GetAsync($"task/{id}");
+        var response = await _http.GetAsync($"tag/{id}"); // was "task/{id}"
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return null;
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync<tag>();
@@ -26,13 +28,13 @@ public class TagService
     {
         var response = await _http.PostAsJsonAsync("tag", tag);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<tag>();
-
+        return await response.Content.ReadFromJsonAsync<tag>()
+               ?? throw new InvalidOperationException("Failed to deserialize created tag");
     }
 
     public async Task<bool> DeleteTagAsync(int id)
     {
-        var response = await _http.DeleteAsync($"task/{id}");
+        var response = await _http.DeleteAsync($"tag/{id}"); // was "task/{id}"
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return false;
         response.EnsureSuccessStatusCode();
         return true;
