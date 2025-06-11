@@ -1,57 +1,287 @@
 @page "/tasks"
+@using focus_flow.Shared.models
 @inject TaskService TaskService
+@inject TagService TagService
 
-<h3>Tasks</h3>
+<PageTitle>Task Management</PageTitle>
 
-@if (tasks == null)
-{
-    <p><em>Loading...</em></p>
-}
-else if (!tasks.Any())
-{
-    <p>No tasks found.</p>
-}
-else
-{
-    <ul>
-        @foreach (var task in tasks)
-        {
-            <li>
-                <b>@task.Title</b> - @task.Description
-                <button @onclick="() => DeleteTask(task.Id)">🗑️</button>
-            </li>
-        }
-    </ul>
-}
+<div class="container mt-4">
+    <h1>Task Management</h1>
+    
+    @if (loading)
+    {
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else
+    {
+        <!-- Create New Task Form -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3>Create New Task</h3>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Task Title</label>
+                    <input @bind="newTaskTitle" class="form-control" placeholder="Enter task title" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea @bind="newTaskDescription" class="form-control" rows="3" placeholder="Enter task description"></textarea>
+                </div>
+                <button @onclick="CreateTask" class="btn btn-primary" disabled="@string.IsNullOrWhiteSpace(newTaskTitle)">
+                    Create Task
+                </button>
+            </div>
+        </div>
 
-<h4>Add New Task</h4>
-<input @bind="newTask.Title" placeholder="Title" />
-<input @bind="newTask.Description" placeholder="Description" />
-<button @onclick="CreateTask">Add Task</button>
+        <!-- Tasks List -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3>Tasks (@tasks.Count)</h3>
+                <button @onclick="LoadTasks" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body">
+                @if (tasks.Any())
+                {
+                    <div class="row">
+                        @foreach (var task in tasks)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">@task.Title</h5>
+                                        <p class="card-text">@task.Description</p>
+                                        
+                                        @if (task.Tags?.Any() == true)
+                                        {
+                                            <div class="mb-2">
+                                                @foreach (var tag in task.Tags)
+                                                {
+                                                    <span class="badge bg-secondary me-1">@tag.Name</span>
+                                                }
+                                            </div>
+                                        }
+                                        
+                                        <div class="btn-group" role="group">
+                                            <button @onclick="() => EditTask(task)" class="btn btn-sm btn-outline-primary">
+                                                Edit
+                                            </button>
+                                            <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger">
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted">
+                        <p>No tasks found. Create your first task above!</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Tags Management -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Tags</h3>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <input @bind="newTagName" class="form-control" placeholder="Enter tag name" />
+                    </div>
+                    <div class="col-md-4">
+                        <button @onclick="CreateTag" class="btn btn-success" disabled="@string.IsNullOrWhiteSpace(newTagName)">
+                            Add Tag
+                        </button>
+                    </div>
+                </div>
+                
+                @if (tags.Any())
+                {
+                    <div>
+                        @foreach (var tag in tags)
+                        {
+                            <span class="badge bg-info me-2 mb-2 p-2">
+                                @tag.Name
+                                <button @onclick="() => DeleteTag(tag.Id)" class="btn-close btn-close-white ms-2" style="font-size: 0.6em;"></button>
+                            </span>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger mt-3" role="alert">
+            @errorMessage
+        </div>
+    }
+</div>
 
 @code {
-    private List<taskItem>? tasks;
-    private taskItem newTask = new();
+    private List<taskItem> tasks = new();
+    private List<tag> tags = new();
+    private bool loading = true;
+    private string errorMessage = string.Empty;
+    
+    // Form fields
+    private string newTaskTitle = string.Empty;
+    private string newTaskDescription = string.Empty;
+    private string newTagName = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
-        tasks = await TaskService.GetTasksAsync();
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        loading = true;
+        errorMessage = string.Empty;
+        
+        try
+        {
+            await LoadTasks();
+            await LoadTags();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadTasks()
+    {
+        try
+        {
+            tasks = await TaskService.GetTasksAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tasks: {ex.Message}";
+        }
+    }
+
+    private async Task LoadTags()
+    {
+        try
+        {
+            tags = await TagService.GetTagsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading tags: {ex.Message}";
+        }
     }
 
     private async Task CreateTask()
     {
-        var created = await TaskService.CreateTaskAsync(newTask);
-        tasks?.Add(created);
-        newTask = new(); // reset form
+        if (string.IsNullOrWhiteSpace(newTaskTitle)) return;
+
+        try
+        {
+            var newTask = new taskItem
+            {
+                Title = newTaskTitle,
+                Description = newTaskDescription,
+                Tags = new List<tag>() // Empty for now, you can add tag selection later
+            };
+
+            var createdTask = await TaskService.CreateTaskAsync(newTask);
+            tasks.Add(createdTask);
+            
+            // Clear form
+            newTaskTitle = string.Empty;
+            newTaskDescription = string.Empty;
+            errorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating task: {ex.Message}";
+        }
     }
 
-    private async Task DeleteTask(int id)
+    private async Task DeleteTask(int taskId)
     {
-        bool deleted = await TaskService.DeleteTaskAsync(id);
-        if (deleted)
+        try
         {
-            var toRemove = tasks?.FirstOrDefault(t => t.Id == id);
-            if (toRemove != null) tasks?.Remove(toRemove);
+            var success = await TaskService.DeleteTaskAsync(taskId);
+            if (success)
+            {
+                tasks.RemoveAll(t => t.Id == taskId);
+                errorMessage = string.Empty;
+            }
+            else
+            {
+                errorMessage = "Task not found or could not be deleted.";
+            }
         }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting task: {ex.Message}";
+        }
+    }
+
+    private async Task CreateTag()
+    {
+        if (string.IsNullOrWhiteSpace(newTagName)) return;
+
+        try
+        {
+            var newTag = new tag
+            {
+                Name = newTagName
+            };
+
+            var createdTag = await TagService.CreateTagAsync(newTag);
+            tags.Add(createdTag);
+            
+            newTagName = string.Empty;
+            errorMessage = string.Empty;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating tag: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteTag(int tagId)
+    {
+        try
+        {
+            var success = await TagService.DeleteTagAsync(tagId);
+            if (success)
+            {
+                tags.RemoveAll(t => t.Id == tagId);
+                errorMessage = string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting tag: {ex.Message}";
+        }
+    }
+
+    private void EditTask(taskItem task)
+    {
+        // TODO: Implement edit functionality
+        // You could show a modal or navigate to an edit page
+        Console.WriteLine($"Edit task: {task.Title}");
     }
 }
