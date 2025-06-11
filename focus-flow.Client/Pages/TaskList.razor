@@ -1,0 +1,57 @@
+@page "/tasks"
+@inject TaskService TaskService
+
+<h3>Tasks</h3>
+
+@if (tasks == null)
+{
+    <p><em>Loading...</em></p>
+}
+else if (!tasks.Any())
+{
+    <p>No tasks found.</p>
+}
+else
+{
+    <ul>
+        @foreach (var task in tasks)
+        {
+            <li>
+                <b>@task.Title</b> - @task.Description
+                <button @onclick="() => DeleteTask(task.Id)">🗑️</button>
+            </li>
+        }
+    </ul>
+}
+
+<h4>Add New Task</h4>
+<input @bind="newTask.Title" placeholder="Title" />
+<input @bind="newTask.Description" placeholder="Description" />
+<button @onclick="CreateTask">Add Task</button>
+
+@code {
+    private List<taskItem>? tasks;
+    private taskItem newTask = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        tasks = await TaskService.GetTasksAsync();
+    }
+
+    private async Task CreateTask()
+    {
+        var created = await TaskService.CreateTaskAsync(newTask);
+        tasks?.Add(created);
+        newTask = new(); // reset form
+    }
+
+    private async Task DeleteTask(int id)
+    {
+        bool deleted = await TaskService.DeleteTaskAsync(id);
+        if (deleted)
+        {
+            var toRemove = tasks?.FirstOrDefault(t => t.Id == id);
+            if (toRemove != null) tasks?.Remove(toRemove);
+        }
+    }
+}
