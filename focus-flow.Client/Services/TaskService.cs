@@ -11,7 +11,7 @@ public class TaskService
     }
 
     public async Task<List<taskItem>> GetTasksAsync()
-        => await _http.GetFromJsonAsync<List<taskItem>>("task");
+        => await _http.GetFromJsonAsync<List<taskItem>>("task") ?? new List<taskItem>();
 
     public async Task<taskItem?> GetTaskItemAsync(int id)
     {
@@ -26,7 +26,8 @@ public class TaskService
     {
         var response = await _http.PostAsJsonAsync("task", task);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadFromJsonAsync<taskItem>();
+        return await response.Content.ReadFromJsonAsync<taskItem>()
+                ?? throw new InvalidOperationException("Failed to create task");
     }
 
     public async Task<bool> DeleteTaskAsync(int id)
