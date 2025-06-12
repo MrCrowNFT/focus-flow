@@ -37,6 +37,8 @@ public class tagController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<tag>> CreateTag(tag tag)
     {
+        if (tag == null)
+            return BadRequest("Input cannot be null");
         _context.Tags.Add(tag);
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetTag), new { id = tag.Id }, tag);

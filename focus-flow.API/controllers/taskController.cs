@@ -39,6 +39,8 @@ public class taskController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<taskItem>> CreateTask(taskItem task)
     {
+        if (task == null)
+            return BadRequest("Input cannot be null");
         _context.Tasks.Add(task);
         await _context.SaveChangesAsync();
         return CreatedAtAction(nameof(GetTask), new { id = task.Id }, task);
