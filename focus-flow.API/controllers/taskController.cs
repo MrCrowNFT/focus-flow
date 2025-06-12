@@ -30,6 +30,9 @@ public class taskController : ControllerBase
         var task = await _context.Tasks
             .Include(t => t.Tags)
             .FirstOrDefaultAsync(t => t.Id == id);
+        if (task == null)
+            return NotFound();
+
         return task;
     }
 

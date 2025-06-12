@@ -29,6 +29,8 @@ public class tagController : ControllerBase
     {
         var tag = await _context.Tags
             .FirstOrDefaultAsync(t => t.Id == id);
+        if (tag == null)
+            return NotFound();
         return tag;
     }
 
