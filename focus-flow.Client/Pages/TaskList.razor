@@ -30,6 +30,34 @@
                     <label class="form-label">Description</label>
                     <textarea @bind="newTaskDescription" class="form-control" rows="3" placeholder="Enter task description"></textarea>
                 </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Start Date</label>
+                        <input @bind="newTaskStartDate" class="form-control" type="datetime-local" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Due Date (Optional)</label>
+                        <input @bind="newTaskDueDate" class="form-control" type="datetime-local" />
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Priority</label>
+                        <select @bind="newTaskPriority" class="form-select">
+                            <option value="@taskPriority.Low">Low</option>
+                            <option value="@taskPriority.Medium">Medium</option>
+                            <option value="@taskPriority.High">High</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <select @bind="newTaskStatus" class="form-select">
+                            <option value="@taskStatus.Pending">Pending</option>
+                            <option value="@taskStatus.InProgress">In Progress</option>
+                            <option value="@taskStatus.Completed">Completed</option>
+                        </select>
+                    </div>
+                </div>
                 <button @onclick="CreateTask" class="btn btn-primary" disabled="@string.IsNullOrWhiteSpace(newTaskTitle)">
                     Create Task
                 </button>
@@ -53,8 +81,31 @@
                             <div class="col-md-6 mb-3">
                                 <div class="card">
                                     <div class="card-body">
-                                        <h5 class="card-title">@task.Title</h5>
-                                        <p class="card-text">@task.Description</p>
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h5 class="card-title">@task.Title</h5>
+                                            <span class="badge @GetStatusBadgeClass(task.Status)">@task.Status</span>
+                                        </div>
+                                        
+                                        @if (!string.IsNullOrEmpty(task.Description))
+                                        {
+                                            <p class="card-text">@task.Description</p>
+                                        }
+                                        
+                                        <div class="row text-small mb-2" style="font-size: 0.875rem;">
+                                            <div class="col-6">
+                                                <strong>Start:</strong> @task.StartDate.ToString("MMM dd, yyyy")
+                                            </div>
+                                            @if (task.DueDate.HasValue)
+                                            {
+                                                <div class="col-6">
+                                                    <strong>Due:</strong> @task.DueDate.Value.ToString("MMM dd, yyyy")
+                                                </div>
+                                            }
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <span class="badge @GetPriorityBadgeClass(task.Priority) me-2">@task.Priority Priority</span>
+                                        </div>
                                         
                                         @if (task.Tags?.Any() == true)
                                         {
@@ -140,6 +191,10 @@
     private string newTaskTitle = string.Empty;
     private string newTaskDescription = string.Empty;
     private string newTagName = string.Empty;
+    private DateTime newTaskStartDate = DateTime.Now;
+    private DateTime? newTaskDueDate;
+    private taskPriority newTaskPriority = taskPriority.Medium;
+    private taskStatus newTaskStatus = taskStatus.Pending;
 
     protected override async Task OnInitializedAsync()
     {
@@ -200,7 +255,11 @@
             {
                 Title = newTaskTitle,
                 Description = newTaskDescription,
-                Tags = new List<tag>() // Empty for now, you can add tag selection later
+                StartDate = newTaskStartDate,
+                DueDate = newTaskDueDate,
+                Priority = newTaskPriority,
+                Status = newTaskStatus,
+                Tags = new List<tag>()
             };
 
             var createdTask = await TaskService.CreateTaskAsync(newTask);
@@ -209,6 +268,10 @@
             // Clear form
             newTaskTitle = string.Empty;
             newTaskDescription = string.Empty;
+            newTaskStartDate = DateTime.Now;
+            newTaskDueDate = null;
+            newTaskPriority = taskPriority.Medium;
+            newTaskStatus = taskStatus.Pending;
             errorMessage = string.Empty;
         }
         catch (Exception ex)
@@ -283,5 +346,28 @@
         // TODO: Implement edit functionality
         // You could show a modal or navigate to an edit page
         Console.WriteLine($"Edit task: {task.Title}");
+    }
+
+    // Helper methods for badge styling
+    private string GetStatusBadgeClass(taskStatus status)
+    {
+        return status switch
+        {
+            taskStatus.Pending => "bg-warning text-dark",
+            taskStatus.InProgress => "bg-info text-dark",
+            taskStatus.Completed => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetPriorityBadgeClass(taskPriority priority)
+    {
+        return priority switch
+        {
+            taskPriority.Low => "bg-light text-dark",
+            taskPriority.Medium => "bg-primary",
+            taskPriority.High => "bg-danger",
+            _ => "bg-secondary"
+        };
     }
 }
