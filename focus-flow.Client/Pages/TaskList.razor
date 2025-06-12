@@ -2,6 +2,7 @@
 @using focus_flow.Shared.models
 @inject TaskService TaskService
 @inject TagService TagService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Task Management</PageTitle>
 
@@ -24,11 +25,11 @@
             <div class="card-body">
                 <div class="mb-3">
                     <label class="form-label">Task Title</label>
-                    <input @bind="newTaskTitle" class="form-control" placeholder="Enter task title" />
+                    <input @bind="newTaskTitle" @bind:event="oninput" class="form-control" placeholder="Enter task title" />
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Description</label>
-                    <textarea @bind="newTaskDescription" class="form-control" rows="3" placeholder="Enter task description"></textarea>
+                    <textarea @bind="newTaskDescription" @bind:event="oninput" class="form-control" rows="3" placeholder="Enter task description"></textarea>
                 </div>
                 <div class="row mb-3">
                     <div class="col-md-6">
@@ -58,7 +59,11 @@
                         </select>
                     </div>
                 </div>
-                <button @onclick="CreateTask" class="btn btn-primary" disabled="@string.IsNullOrWhiteSpace(newTaskTitle)">
+                <button @onclick="CreateTask" class="btn btn-primary" disabled="@(isCreatingTask || string.IsNullOrWhiteSpace(newTaskTitle))">
+                    @if (isCreatingTask)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
                     Create Task
                 </button>
             </div>
@@ -68,8 +73,16 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3>Tasks (@tasks.Count)</h3>
-                <button @onclick="LoadTasks" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                <button @onclick="LoadTasks" class="btn btn-outline-secondary btn-sm" disabled="@isLoadingTasks">
+                    @if (isLoadingTasks)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-arrow-clockwise"></i>
+                    }
+                    Refresh
                 </button>
             </div>
             <div class="card-body">
@@ -121,7 +134,12 @@
                                             <button @onclick="() => EditTask(task)" class="btn btn-sm btn-outline-primary">
                                                 Edit
                                             </button>
-                                            <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger">
+                                            <button @onclick="() => DeleteTask(task.Id)" class="btn btn-sm btn-outline-danger" 
+                                                    disabled="@(deletingTaskIds.Contains(task.Id))">
+                                                @if (deletingTaskIds.Contains(task.Id))
+                                                {
+                                                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                                }
                                                 Delete
                                             </button>
                                         </div>
@@ -148,10 +166,14 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-8">
-                        <input @bind="newTagName" class="form-control" placeholder="Enter tag name" />
+                        <input @bind="newTagName" @bind:event="oninput" class="form-control" placeholder="Enter tag name" />
                     </div>
                     <div class="col-md-4">
-                        <button @onclick="CreateTag" class="btn btn-success" disabled="@string.IsNullOrWhiteSpace(newTagName)">
+                        <button @onclick="CreateTag" class="btn btn-success" disabled="@(isCreatingTag || string.IsNullOrWhiteSpace(newTagName))">
+                            @if (isCreatingTag)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                            }
                             Add Tag
                         </button>
                     </div>
@@ -164,7 +186,8 @@
                         {
                             <span class="badge bg-info me-2 mb-2 p-2">
                                 @tag.Name
-                                <button @onclick="() => DeleteTag(tag.Id)" class="btn-close btn-close-white ms-2" style="font-size: 0.6em;"></button>
+                                <button @onclick="() => DeleteTag(tag.Id)" class="btn-close btn-close-white ms-2" 
+                                        style="font-size: 0.6em;" disabled="@(deletingTagIds.Contains(tag.Id))"></button>
                             </span>
                         }
                     </div>
@@ -176,7 +199,16 @@
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="alert alert-danger mt-3" role="alert">
-            @errorMessage
+            <strong>Error:</strong> @errorMessage
+            <button type="button" class="btn-close" @onclick="ClearError"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success mt-3" role="alert">
+            <strong>Success:</strong> @successMessage
+            <button type="button" class="btn-close" @onclick="ClearSuccess"></button>
         </div>
     }
 </div>
@@ -186,6 +218,14 @@
     private List<tag> tags = new();
     private bool loading = true;
     private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    
+    // Loading states
+    private bool isCreatingTask = false;
+    private bool isCreatingTag = false;
+    private bool isLoadingTasks = false;
+    private HashSet<int> deletingTaskIds = new();
+    private HashSet<int> deletingTagIds = new();
     
     // Form fields
     private string newTaskTitle = string.Empty;
@@ -204,32 +244,43 @@
     private async Task LoadData()
     {
         loading = true;
-        errorMessage = string.Empty;
+        ClearMessages();
         
         try
         {
-            await LoadTasks();
-            await LoadTags();
+            await Task.WhenAll(LoadTasks(), LoadTags());
+            await LogToConsole("Data loaded successfully");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading data: {ex.Message}";
+            await LogToConsole($"Error loading data: {ex}");
         }
         finally
         {
             loading = false;
+            StateHasChanged();
         }
     }
 
     private async Task LoadTasks()
     {
+        isLoadingTasks = true;
         try
         {
+            await LogToConsole("Loading tasks...");
             tasks = await TaskService.GetTasksAsync();
+            await LogToConsole($"Loaded {tasks.Count} tasks");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading tasks: {ex.Message}";
+            await LogToConsole($"Error loading tasks: {ex}");
+        }
+        finally
+        {
+            isLoadingTasks = false;
+            StateHasChanged();
         }
     }
 
@@ -237,11 +288,14 @@
     {
         try
         {
+            await LogToConsole("Loading tags...");
             tags = await TagService.GetTagsAsync();
+            await LogToConsole($"Loaded {tags.Count} tags");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading tags: {ex.Message}";
+            await LogToConsole($"Error loading tags: {ex}");
         }
     }
 
@@ -249,12 +303,17 @@
     {
         if (string.IsNullOrWhiteSpace(newTaskTitle)) return;
 
+        isCreatingTask = true;
+        ClearMessages();
+        
         try
         {
+            await LogToConsole($"Creating task: {newTaskTitle}");
+            
             var newTask = new taskItem
             {
-                Title = newTaskTitle,
-                Description = newTaskDescription,
+                Title = newTaskTitle.Trim(),
+                Description = newTaskDescription?.Trim() ?? "",
                 StartDate = newTaskStartDate,
                 DueDate = newTaskDueDate,
                 Priority = newTaskPriority,
@@ -266,38 +325,52 @@
             tasks.Add(createdTask);
             
             // Clear form
-            newTaskTitle = string.Empty;
-            newTaskDescription = string.Empty;
-            newTaskStartDate = DateTime.Now;
-            newTaskDueDate = null;
-            newTaskPriority = taskPriority.Medium;
-            newTaskStatus = taskStatus.Pending;
-            errorMessage = string.Empty;
+            ResetTaskForm();
+            successMessage = "Task created successfully!";
+            await LogToConsole($"Task created: {createdTask.Title} with ID: {createdTask.Id}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error creating task: {ex.Message}";
+            await LogToConsole($"Error creating task: {ex}");
+        }
+        finally
+        {
+            isCreatingTask = false;
+            StateHasChanged();
         }
     }
 
     private async Task DeleteTask(int taskId)
     {
+        deletingTaskIds.Add(taskId);
+        ClearMessages();
+        
         try
         {
+            await LogToConsole($"Deleting task with ID: {taskId}");
             var success = await TaskService.DeleteTaskAsync(taskId);
             if (success)
             {
                 tasks.RemoveAll(t => t.Id == taskId);
-                errorMessage = string.Empty;
+                successMessage = "Task deleted successfully!";
+                await LogToConsole($"Task {taskId} deleted successfully");
             }
             else
             {
                 errorMessage = "Task not found or could not be deleted.";
+                await LogToConsole($"Failed to delete task {taskId}");
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error deleting task: {ex.Message}";
+            await LogToConsole($"Error deleting task {taskId}: {ex}");
+        }
+        finally
+        {
+            deletingTaskIds.Remove(taskId);
+            StateHasChanged();
         }
     }
 
@@ -305,39 +378,67 @@
     {
         if (string.IsNullOrWhiteSpace(newTagName)) return;
 
+        isCreatingTag = true;
+        ClearMessages();
+        
         try
         {
+            await LogToConsole($"Creating tag: {newTagName}");
+            
             var newTag = new tag
             {
-                Name = newTagName
+                Name = newTagName.Trim()
             };
 
             var createdTag = await TagService.CreateTagAsync(newTag);
             tags.Add(createdTag);
             
             newTagName = string.Empty;
-            errorMessage = string.Empty;
+            successMessage = "Tag created successfully!";
+            await LogToConsole($"Tag created: {createdTag.Name} with ID: {createdTag.Id}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error creating tag: {ex.Message}";
+            await LogToConsole($"Error creating tag: {ex}");
+        }
+        finally
+        {
+            isCreatingTag = false;
+            StateHasChanged();
         }
     }
 
     private async Task DeleteTag(int tagId)
     {
+        deletingTagIds.Add(tagId);
+        ClearMessages();
+        
         try
         {
+            await LogToConsole($"Deleting tag with ID: {tagId}");
             var success = await TagService.DeleteTagAsync(tagId);
             if (success)
             {
                 tags.RemoveAll(t => t.Id == tagId);
-                errorMessage = string.Empty;
+                successMessage = "Tag deleted successfully!";
+                await LogToConsole($"Tag {tagId} deleted successfully");
+            }
+            else
+            {
+                errorMessage = "Tag not found or could not be deleted.";
+                await LogToConsole($"Failed to delete tag {tagId}");
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error deleting tag: {ex.Message}";
+            await LogToConsole($"Error deleting tag {tagId}: {ex}");
+        }
+        finally
+        {
+            deletingTagIds.Remove(tagId);
+            StateHasChanged();
         }
     }
 
@@ -346,6 +447,30 @@
         // TODO: Implement edit functionality
         // You could show a modal or navigate to an edit page
         Console.WriteLine($"Edit task: {task.Title}");
+    }
+
+    private void ResetTaskForm()
+    {
+        newTaskTitle = string.Empty;
+        newTaskDescription = string.Empty;
+        newTaskStartDate = DateTime.Now;
+        newTaskDueDate = null;
+        newTaskPriority = taskPriority.Medium;
+        newTaskStatus = taskStatus.Pending;
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+
+    private void ClearError() => errorMessage = string.Empty;
+    private void ClearSuccess() => successMessage = string.Empty;
+
+    private async Task LogToConsole(string message)
+    {
+        await JSRuntime.InvokeVoidAsync("console.log", $"[TaskManagement] {DateTime.Now:HH:mm:ss}: {message}");
     }
 
     // Helper methods for badge styling

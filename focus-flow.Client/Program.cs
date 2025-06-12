@@ -13,7 +13,7 @@ builder.Services.AddScoped<TagService>();
 
 // Configure HttpClient with API base address
 builder.Services.AddScoped(sp => new HttpClient { 
-    BaseAddress = new Uri("https://localhost:7000/") // API base URL
+    BaseAddress = new Uri("http://localhost:5122") 
 });
 
 
